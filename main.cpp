@@ -126,8 +126,7 @@ IDxcBlob* CompileShader(
 	IDxcUtils* dxcUtils,
 	IDxcCompiler3* dxcCompiler,
 	IDxcIncludeHandler* includeHandler
-)
-{
+){
 	Log(ConverString(std::format(L"Begin CompliteShader,path:{},profile:{}\n", filePath, profile)));
 	IDxcBlobEncoding* shaderSource = nullptr;
 	HRESULT hr = dxcUtils->LoadFile(filePath.c_str(), nullptr, &shaderSource);
@@ -407,7 +406,14 @@ Matrix4x4 Inverse(const Matrix4x4& m) {
 	return result;
 }
 
+
+
+
+
 Transform transform{ {1.0f,1.0f,1.0f},{0.0f,0.0f,0.0f},{0.0f,0.0f,0.0f} };
+
+
+
 
 DirectX::ScratchImage LoadTexture(const std::string filePath)
 {
@@ -716,9 +722,17 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	descriptorRange[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND; // Offsetを自動計算
 
 	//RootParmater作成
+
 	D3D12_ROOT_PARAMETER rootParameters[3] = {};
+
+	rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;    // CBVを使う
+	rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;   // PixelShaderで使う
+	rootParameters[0].Descriptor.ShaderRegister = 0;    // レジスタ番号0とバインド
+
+
+	
 	rootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-	rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+	rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
 	rootParameters[1].Descriptor.ShaderRegister = 0;
 	
 
@@ -847,9 +861,30 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	VertexData* vertexData = nullptr;
 	vertexReource->Map(0, nullptr, reinterpret_cast<void**>(&vertexData));
-	vertexData[0] = { -0.5f,-0.5f,0.0f,1.0f };
-	vertexData[1] = { 0.0f,0.5f,0.0f,1.0f };
-	vertexData[2] = { 0.5f,-0.5f,0.0f,1.0f };
+	// 左下
+	vertexData[0].position = { -0.5f, -0.5f, 0.0f, 1.0f };
+	vertexData[0].texcoord = { 0.0f, 1.0f };
+	// 上
+	vertexData[1].position = { 0.0f, 0.5f, 0.0f, 1.0f };
+	vertexData[1].texcoord = { 0.5f, 0.0f };
+	// 右下
+	vertexData[2].position = { 0.5f, -0.5f, 0.0f, 1.0f };
+	vertexData[2].texcoord = { 1.0f, 1.0f };
+	// 左下2
+	vertexData[3].position = { -0.5f, -0.5f, 0.5f, 1.0f };
+	vertexData[3].texcoord = { 0.0f, 1.0f };
+	// 上2
+	vertexData[4].position = { 0.0f, 0.0f, 0.0f, 1.0f };
+	vertexData[4].texcoord = { 0.5f, 0.0f };
+	// 右下2
+	vertexData[5].position = { 0.5f, -0.5f, -0.5f, 1.0f };
+	vertexData[5].texcoord = { 1.0f, 1.0f };
+
+
+
+
+	
+
 
 	D3D12_VIEWPORT viewport{};
 
