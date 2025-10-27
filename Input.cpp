@@ -1,16 +1,16 @@
 #include "Input.h"
 #include <cassert>
-#define DIRECTINPIT_VERSION 0x0800
-#include <dinput.h>
 #pragma comment(lib,"dinput8.lib")
 #pragma comment(lib,"dxguid.lib")
-#include <wrl.h>
-using namespace Microsoft::WRL;
+
+
 
 void Input::Initialize(HINSTANCE hInstance, HWND hwnd)
 {
 
 	HRESULT result;
+
+	//IDirectInputDevice8 keyboard;
 
 	IDirectInput8*directInput = nullptr;
 	result = DirectInput8Create(

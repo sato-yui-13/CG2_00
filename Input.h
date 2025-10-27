@@ -1,7 +1,8 @@
 #pragma once
 #include<Windows.h>
-
-
+#include<wrl.h>
+#define DIRECTINPIT_VERSION 0x0800
+#include <dinput.h>
 
 
 class Input
@@ -14,8 +15,12 @@ public:
 	void Update();
 
 
+	template<class T>using ComPtr = Microsoft::WRL::ComPtr<T>;
+
+
 private:
-	
+	//キーボードのデバイス
+	IDirectInputDevice8 keyboard;
 
 	// directInput
 	// keyboardDevice
