@@ -10,6 +10,17 @@
 #include "externals/imgui/imgui.h"
 #include "externals/imgui/imgui_impl_dx12.h"
 #include "externals/imgui/imgui_impl_win32.h"
+#include "Input.h"
+
+
+//DirectInputのバージョン指定
+#define DIRECTINPUT_VERSION 0x0800 
+#include <dinput.h>
+
+#pragma comment(lib,"dinput8.lib")
+
+
+
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 #pragma comment(lib,"dxcompiler.lib")
@@ -21,6 +32,9 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg
 
 #include<fstream>
 #include<sstream>
+
+
+
 
 struct Matrix3x3
 {
@@ -603,6 +617,9 @@ ID3D12Resource* CreateBufferResource(ID3D12Device* device, size_t sizeInBytes)
 	assert(SUCCEEDED(hr));
 
 	return vertexResouce;
+
+
+
 }
 
 
@@ -659,6 +676,8 @@ ID3D12Resource* CreateDepthStencilTextureResource(ID3D12Device* device, int32_t 
 // Windowsアプリでのエントリーポイント(main関数)
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
+	
+
 	CoInitializeEx(0, COINIT_MULTITHREADED);
 
 	WNDCLASS wc{};
@@ -697,6 +716,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		nullptr,
 		wc.hInstance,
 		nullptr);
+
+
+
+
+
 
 #ifdef _DEBUG
 	ID3D12Debug1* debugController = nullptr;
@@ -990,6 +1014,56 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	hr = device->CreateGraphicsPipelineState(&graphicsPipelineStateDesc, IID_PPV_ARGS(&graphicsPipelineState));
 	assert(SUCCEEDED(hr));
 
+
+#pragma region Direct input
+	//ポインタ
+	Input* input = nullptr;
+	//入力の初期化
+	input = new Input();
+	input->Initialize(wc.hInstance,hwnd);
+
+
+
+
+
+
+	//Direct Input 初期化
+	IDirectInput8* directInput = nullptr;
+	hr = DirectInput8Create(
+		wc.hInstance,
+		DIRECTINPUT_VERSION,
+		IID_IDirectInput8,
+		(void**)&directInput,
+		nullptr
+	);
+	assert(SUCCEEDED(hr));
+
+	//キーボードデバイスの生成
+	IDirectInputDevice8* keyboard = nullptr;
+	hr = directInput->CreateDevice(GUID_SysKeyboard, &keyboard, NULL);
+	assert(SUCCEEDED(hr));
+
+
+	//入力データ形式のセット
+	hr = keyboard->SetDataFormat(&c_dfDIKeyboard);
+	assert(SUCCEEDED(hr));
+
+	//排制御レベルのセット
+	hr = keyboard->SetCooperativeLevel(
+		hwnd,
+		DISCL_FOREGROUND | DISCL_NONEXCLUSIVE | DISCL_NOWINKEY
+	);
+	assert(SUCCEEDED(hr));
+
+
+	//入力解放
+	delete input;
+#pragma endregion
+
+	
+
+
+
 	/*
 	ID3D12Resource* vertexResource = CreateBufferResource(device, sizeof(VertexData) * 6);
 
@@ -1187,7 +1261,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	indexDataSprite[3] = 1; indexDataSprite[4] = 3; indexDataSprite[5] = 2;
 
 
+	//キーボートの入力状況補間管理
+	BYTE key[256]{};
+	BYTE prekey[256]{};
 
+	//
 	MSG msg{};
 	//ウィンドウの×ボタンが押されるまでループ
 	while (msg.message != WM_QUIT)
@@ -1199,6 +1277,21 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			DispatchMessage(&msg);
 		} else
 		{
+			//キーボード情報の取得開始
+			keyboard->Acquire();
+			
+			//前frameの入力を保管
+			memcpy(prekey, key, 256);
+
+			//最新の入力を保存
+			keyboard->GetDeviceState(sizeof(key), key);
+			
+
+			if (key[DIK_SPACE]&& !prekey[DIK_SPACE]) {
+				
+				OutputDebugStringA("Press Space \n");
+			}
+
 			//ゲームの処理
 
 			//Sprite用のWorldViewProjectionMatrixを作る
@@ -1329,13 +1422,18 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				WaitForSingleObject(fenceEvent, INFINITE);
 			}
 
+
+			//コマンドリスト
 			hr = commandAllocator->Reset();
 			assert(SUCCEEDED(hr));
 			hr = commandList->Reset(commandAllocator, nullptr);
 			assert(SUCCEEDED(hr));
 
-
-
+			//ECSを押したら消す
+			if (key[DIK_ESCAPE]) {
+				OutputDebugStringA("Game Loop  End \n");
+				break;
+			}
 		}
 
 	}
