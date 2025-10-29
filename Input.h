@@ -1,7 +1,7 @@
 #pragma once
 #include<Windows.h>
 #include<wrl.h>
-#define DIRECTINPIT_VERSION 0x0800
+#define DIRECTINPUT_VERSION 0x0800
 #include <dinput.h>
 
 
@@ -18,9 +18,29 @@ public:
 	template<class T>using ComPtr = Microsoft::WRL::ComPtr<T>;
 
 
+	bool PushKey(BYTE keyNumber);
+	bool TriggerKey(BYTE keyNumber);
+
 private:
+
+
+	BYTE key[256] = {};
+
+//前回の全キー
+	BYTE keyPre[256] = {};
+
+
 	//キーボードのデバイス
-	IDirectInputDevice8 keyboard;
+	ComPtr<IDirectInputDevice8> keyboard;
+
+	ComPtr<IDirectInput8> directInput;
+
+
+
+	
+
+
+
 
 	// directInput
 	// keyboardDevice

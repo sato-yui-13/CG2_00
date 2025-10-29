@@ -10,9 +10,14 @@ void Input::Initialize(HINSTANCE hInstance, HWND hwnd)
 
 	HRESULT result;
 
+
+	//前回のキー入力保存
+	memcpy(keyPre, key, sizeof(key));
+
+
 	//IDirectInputDevice8 keyboard;
 
-	IDirectInput8*directInput = nullptr;
+	
 	result = DirectInput8Create(
 		hInstance,
 		DIRECTINPUT_VERSION,
@@ -24,7 +29,7 @@ void Input::Initialize(HINSTANCE hInstance, HWND hwnd)
 
 
 	//キーボードデバイスの生成
-	IDirectInputDevice8* keyboard = nullptr;
+
 	result = directInput->CreateDevice(GUID_SysKeyboard, &keyboard, NULL);
 	//入力データ形式のセット
 	result = keyboard->SetDataFormat(&c_dfDIKeyboard);
@@ -45,4 +50,35 @@ void Input::Initialize(HINSTANCE hInstance, HWND hwnd)
 
 void Input::Update()
 {
+
+
+	//キーボード情報の取得開始
+	keyboard->Acquire();
+
+	//全キーの入力情報を取得する
+	BYTE key[256] = {};
+	keyboard->GetDeviceState(sizeof(key), key);
+
+
 }
+
+bool Input::PushKey(BYTE keyNumber)
+{
+
+	//指定きーを押していればtrueを返す
+	if (key [keyNumber] ) {
+		return true;
+	};
+
+
+	return false;
+}
+
+bool Input::TriggerKey(BYTE keyNumber)
+	{
+
+	if (key[keyNumber]) {
+		return true;
+	};
+		return false;
+	}
