@@ -1306,6 +1306,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				OutputDebugStringA("Press Space \n");
 			}
 
+
 			//ゲームの処理
 
 			//Sprite用のWorldViewProjectionMatrixを作る
