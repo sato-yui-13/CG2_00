@@ -1301,7 +1301,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			keyboard->GetDeviceState(sizeof(key), key);
 			
 
-			if (key[DIK_SPACE]&& !prekey[DIK_SPACE]) {
+			if (prekey[DIK_SPACE]&& !key[DIK_SPACE]) {
 				
 				OutputDebugStringA("Press Space \n");
 			}
