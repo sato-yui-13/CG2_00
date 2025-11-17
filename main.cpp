@@ -1055,11 +1055,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	while (true)
 	{
 		//Windowにメッセージが来てたら最優先で処理させる
-		if (winApp->ProcessMessage())
+		if (!winApp->ProcessMessage())
 		{
-			break;
-		} else
-		{
+			
 			//キーボード情報の取得開始
 			keyboard->Acquire();
 			input->Update();
