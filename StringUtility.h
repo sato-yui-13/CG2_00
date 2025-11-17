@@ -1,0 +1,12 @@
+#pragma once
+namespace StringUtility
+{
+
+	//stringをwstringに変換する
+	std::wstring ConvertString(const std::string& str);
+
+	//wstringをstringに変換
+	std::string ConvertString(const std::wstring& str);
+
+};
+
