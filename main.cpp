@@ -7,21 +7,20 @@
 #include <cassert>
 #include <dxgidebug.h>
 #include <dxcapi.h>
+#include "Input.h"
+#include "WinApp.h"
 #include "externals/imgui/imgui.h"
 #include "externals/imgui/imgui_impl_dx12.h"
 #include "externals/imgui/imgui_impl_win32.h"
-#include "Input.h"
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-
-//DirectInputのバージョン指定
-#define DIRECTINPUT_VERSION 0x0800 
+//DirectINPUT
+#define DIRECTINPUT_VERSION 0x0800
 #include <dinput.h>
 
 #pragma comment(lib,"dinput8.lib")
 
 
-
-extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 #pragma comment(lib,"dxcompiler.lib")
 #pragma comment(lib,"dxguid.lib")
@@ -29,17 +28,6 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg
 #pragma comment(lib,"dxgi.lib")
 
 #include "externals/DirectXTex/DirectXTex.h"
-
-#include<fstream>
-#include<sstream>
-
-
-
-
-struct Matrix3x3
-{
-	float m[3][3];
-};
 
 struct Matrix4x4
 {
@@ -76,24 +64,6 @@ struct Transform {
 	Vector3 scale;
 	Vector3 rotate;
 	Vector3 translate;
-};
-
-struct MaterialData
-{
-	std::string textureFilePath;
-};
-
-
-struct ModelData {
-	std::vector<VertexData> vertices;
-	MaterialData material;
-};
-
-struct Material
-{
-	Vector4 color;
-	int32_t enableLighting;
-	Matrix3x3 uvTransform;
 };
 
 // 単位行列
@@ -294,126 +264,6 @@ Matrix4x4 MakeOrthographicMatrix(float left, float top, float right, float botto
 		(left + right) / (left - right),(top + bottom) / (bottom - top),nearClip / (nearClip - farClip),1.0f,
 	};
 }
-
-MaterialData LoadMaterialTemplateFile(const std::string& directoryPath, const std::string& filename)
-{
-	//1.中で必要となる変数の宣言
-	MaterialData materialData;//構築するMaterialData
-	std::string line;//ファイルから読んだ1行を格納するもの
-
-	//2.ファイルを開く
-	std::ifstream file(directoryPath + "/" + filename);//ファイルを開く
-	assert(file.is_open());
-
-	//3.実際にファイルを読み、MaterialDataを構築していく
-	while (std::getline(file, line))
-	{
-		std::string identifier;
-		std::istringstream s(line);
-		s >> identifier;
-
-		//identifierに応じた処理
-		if (identifier == "map_Kd")
-		{
-			std::string textureFilename;
-			s >> textureFilename;
-			//連結してファイルパスにする
-			materialData.textureFilePath = directoryPath + "/" + textureFilename;
-		}
-	}
-
-	//4.MaterialDataを返す
-	return materialData;
-}
-
-
-//Obj読み込み関数
-ModelData LoadObjFile(const std::string& directoryPath, const std::string& filename)
-{
-	//1.中で必要となる変数の宣言
-	ModelData modelData;//構築するModelData
-	std::vector<Vector4> positions;//位置
-	std::vector<Vector3>normals;//法線
-	std::vector<Vector2>texcoords;//テクスチャ座標
-	std::string line;//ファイルから読んだ1行を格納するもの
-
-	//2.ファイルを開く
-	std::ifstream file(directoryPath + "/" + filename);//ファイルを開く
-	assert(file.is_open());//とりあえず開けなかったら止める
-
-	//3.実際にファイルを読み、ModelDataを構築していく
-	while (std::getline(file, line))
-	{
-		std::string identifier;
-		std::istringstream s(line);
-		s >> identifier;//先頭の識別子を読む
-
-		if (identifier == "v")
-		{
-			Vector4 position;
-			s >> position.x >> position.y >> position.z;
-			position.w = 1.0f;
-			positions.push_back(position);
-		} else if (identifier == "vt")
-		{
-			Vector2 texcoord;
-			s >> texcoord.x >> texcoord.y;
-			texcoords.push_back(texcoord);
-		} else if (identifier == "vn")
-		{
-			Vector3 normal;
-			s >> normal.x >> normal.y >> normal.z;
-			normals.push_back(normal);
-		} else if (identifier == "f")
-		{
-			VertexData triangle[3];
-			//面は三角形限定。その他は未対応
-			for (int32_t faceVertex = 0; faceVertex < 3; faceVertex++)
-			{
-				std::string vertexDefinition;
-				s >> vertexDefinition;
-				//頂点の要素へのIndexは「位置/UV/法線」で格納されているので分解してIndexを取得する
-				std::istringstream v(vertexDefinition);
-				uint32_t elementIndices[3];
-				for (int32_t element = 0; element < 3; element++)
-				{
-					std::string index;
-					std::getline(v, index, '/');//区切りでインデックスを読んでいく
-					elementIndices[element] = std::stoi(index);
-				}
-				//要素へのIndexから、実際の要素の値を取得して、頂点を構築する
-				Vector4 position = positions[elementIndices[0] - 1];
-				position.x *= -1.0f;
-
-				Vector2 texcoord = texcoords[elementIndices[1] - 1];
-				texcoord.y = 1.0f - texcoord.y;
-
-				Vector3 normal = normals[elementIndices[2] - 1];
-				/*normal.x *= -1.0f;*/
-
-				//VertexData vertex = { position,texcoord};
-				//modelData.vertices.push_back(vertex);
-				triangle[faceVertex] = { position,texcoord };
-
-			}
-			//頂点を逆順で登録することで、回り順を逆にする
-			modelData.vertices.push_back(triangle[2]);
-			modelData.vertices.push_back(triangle[1]);
-			modelData.vertices.push_back(triangle[0]);
-		} else if (identifier == "mtllib")
-		{
-			//materialTemplateLibraryファイルの名前を取得する
-			std::string materialFilename;
-			s >> materialFilename;
-			//基本的にobjファイルと同一階層にmtlは存在させるので、ディレクトリ名とファイル名渡す
-			modelData.material = LoadMaterialTemplateFile(directoryPath, materialFilename);
-		}
-	}
-
-	//4.ModelDataをかえす
-	return modelData;
-}
-
 
 //ウィンドウプロシージャ
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg,
@@ -617,9 +467,6 @@ ID3D12Resource* CreateBufferResource(ID3D12Device* device, size_t sizeInBytes)
 	assert(SUCCEEDED(hr));
 
 	return vertexResouce;
-
-
-
 }
 
 
@@ -673,50 +520,19 @@ ID3D12Resource* CreateDepthStencilTextureResource(ID3D12Device* device, int32_t 
 
 }
 
+
+
+
+
+
+
 // Windowsアプリでのエントリーポイント(main関数)
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
-	
+	WinApp* winApp = nullptr;
 
-	CoInitializeEx(0, COINIT_MULTITHREADED);
-
-	WNDCLASS wc{};
-	//ウィンドウプロシージャ
-	wc.lpfnWndProc = WindowProc;
-	//ウィンドウクラス名(なんでもいい)
-	wc.lpszClassName = L"CG2WindowClass";
-	//インスタンスハンドル
-	wc.hInstance = GetModuleHandle(nullptr);
-	//カーソル
-	wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
-
-	//ウィンドウクラスを登録
-	RegisterClass(&wc);
-
-	//クライアント両雨域のサイズ
-	const int32_t kClientWidth = 1280;
-	const int32_t kClientHeight = 720;
-
-	//ウィンドウサイズを表す構造体にクライアント領域を入れる
-	RECT wrc = { 0,0,kClientWidth,kClientHeight };
-
-	//クライアント領域をもとに実際のサイズにwrcを変更してもらう
-	AdjustWindowRect(&wrc, WS_OVERLAPPEDWINDOW, false);
-
-	//ウィンドウの生成
-	HWND hwnd = CreateWindow(
-		wc.lpszClassName,
-		L"CG2",
-		WS_OVERLAPPEDWINDOW,
-		CW_USEDEFAULT,
-		CW_USEDEFAULT,
-		wrc.right - wrc.left,
-		wrc.bottom - wrc.top,
-		nullptr,
-		nullptr,
-		wc.hInstance,
-		nullptr);
-
+	winApp = new WinApp();
+	winApp->Initialize();
 
 
 
@@ -731,8 +547,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 #endif // _DEBUG
 
-	//ウィンドウを表示する
-	ShowWindow(hwnd, SW_SHOW);
 
 	//DXGIファクトリーの作成
 	IDXGIFactory7* dxgiFactory = nullptr;
@@ -828,15 +642,15 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	//スワップチェーンを生成
 	IDXGISwapChain4* swapChain = nullptr;
 	DXGI_SWAP_CHAIN_DESC1 swapChainDesc{};
-	swapChainDesc.Width = kClientWidth;
-	swapChainDesc.Height = kClientHeight;
+	swapChainDesc.Width = WinApp::kClientWidth;
+	swapChainDesc.Height = WinApp::kClientHeight;
 	swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	swapChainDesc.SampleDesc.Count = 1;
 	swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 	swapChainDesc.BufferCount = 2;
 	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 	//コマンドキュー、ウィンドウハンドル、設定を渡して生成する
-	hr = dxgiFactory->CreateSwapChainForHwnd(commandQueue, hwnd, &swapChainDesc, nullptr, nullptr, reinterpret_cast<IDXGISwapChain1**>(&swapChain));
+	hr = dxgiFactory->CreateSwapChainForHwnd(commandQueue, winApp->GetHwnd(), &swapChainDesc, nullptr, nullptr, reinterpret_cast<IDXGISwapChain1**>(&swapChain));
 	assert(SUCCEEDED(hr));
 
 	ID3D12DescriptorHeap* rtvDescriptorHeap = CreateDescriptorHeap(device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 2, false);
@@ -973,10 +787,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	rastrizeDesc.CullMode = D3D12_CULL_MODE_BACK;
 	rastrizeDesc.FillMode = D3D12_FILL_MODE_SOLID;
 
-	IDxcBlob* vertexShaderBlob = CompileShader(L"Resources/shaderes/Object3d.VS.hlsl", L"vs_6_0", dxcUtils, dxcCompiler, includeHandler);
+	IDxcBlob* vertexShaderBlob = CompileShader(L"Resources/shaders/Object3D.VS.hlsl", L"vs_6_0", dxcUtils, dxcCompiler, includeHandler);
 	assert(vertexShaderBlob != nullptr);
 
-	IDxcBlob* pixelShaderBlob = CompileShader(L"Resources/shaderes/Object3d.PS.hlsl", L"ps_6_0", dxcUtils, dxcCompiler, includeHandler);
+	IDxcBlob* pixelShaderBlob = CompileShader(L"Resources/shaders/Object3D.PS.hlsl", L"ps_6_0", dxcUtils, dxcCompiler, includeHandler);
 	assert(pixelShaderBlob != nullptr);
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC graphicsPipelineStateDesc{};
@@ -1014,37 +828,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	hr = device->CreateGraphicsPipelineState(&graphicsPipelineStateDesc, IID_PPV_ARGS(&graphicsPipelineState));
 	assert(SUCCEEDED(hr));
 
-
-#pragma region Direct input
-	//ポインタ
-	Input* input = nullptr;
-	//入力の初期化
-	input = new Input();
-	input->Initialize(wc.hInstance,hwnd);
-
-	
-	//入力の更新
-	input->Update();
-
-
-
-
-	////キーボード情報の取得開始
-	//keyboard->Acquire();
-
-
-
-
-	////全キーの入力情報を取得する
-	//BYTE key[256] = {};
-	//keyboard->GetDeviceState(sizeof(key), key);
-
-
-
-	//Direct Input 初期化
+	//DirectInput 初期化
 	IDirectInput8* directInput = nullptr;
 	hr = DirectInput8Create(
-		wc.hInstance,
+		winApp->GetHInstance(),
 		DIRECTINPUT_VERSION,
 		IID_IDirectInput8,
 		(void**)&directInput,
@@ -1052,33 +839,24 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	);
 	assert(SUCCEEDED(hr));
 
-	//キーボードデバイスの生成
+	//キーボード用デバイスの初期化
 	IDirectInputDevice8* keyboard = nullptr;
-	hr = directInput->CreateDevice(GUID_SysKeyboard, &keyboard, NULL);
+	hr = directInput->CreateDevice(
+		GUID_SysKeyboard,
+		&keyboard,
+		NULL
+	);
 	assert(SUCCEEDED(hr));
-
 
 	//入力データ形式のセット
 	hr = keyboard->SetDataFormat(&c_dfDIKeyboard);
 	assert(SUCCEEDED(hr));
 
-	//排制御レベルのセット
+	//排他制御レベルのセット
 	hr = keyboard->SetCooperativeLevel(
-		hwnd,
-		DISCL_FOREGROUND | DISCL_NONEXCLUSIVE | DISCL_NOWINKEY
-	);
+		winApp->GetHwnd(), DISCL_FOREGROUND | DISCL_NONEXCLUSIVE | DISCL_NOWINKEY);
 	assert(SUCCEEDED(hr));
 
-
-	//入力解放
-	delete input;
-#pragma endregion
-
-	
-
-
-
-	/*
 	ID3D12Resource* vertexResource = CreateBufferResource(device, sizeof(VertexData) * 6);
 
 	D3D12_VERTEX_BUFFER_VIEW vertexBufferView{};
@@ -1108,25 +886,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	//右下
 	vertexData[5].position = { 0.5f,-0.5f,-0.5f,1.0f };
 	vertexData[5].texcoord = { 1.0f,1.0f };
-	*/
 
-	//モデル読み込み
-	ModelData modelData = LoadObjFile("resources", "plane.obj");
-
-	//ModelData modelData = LoadObjFile("resources", "axis.obj");
-
-	//頂点リソースを作る
-	ID3D12Resource* vertexResource = CreateBufferResource(device, sizeof(VertexData) * modelData.vertices.size());
-	//頂点バッファビューを作成する
-	D3D12_VERTEX_BUFFER_VIEW vertexBufferView{};
-	vertexBufferView.BufferLocation = vertexResource->GetGPUVirtualAddress();//リソースの先頭のアドレスから使う
-	vertexBufferView.SizeInBytes = UINT(sizeof(VertexData) * modelData.vertices.size());//使用するリソースのサイズは頂点のサイズ
-	vertexBufferView.StrideInBytes = sizeof(VertexData);//1頂点あたりのサイズ
-
-	//頂点リソースにデータを書き込む
-	VertexData* vertexData = nullptr;
-	vertexResource->Map(0, nullptr, reinterpret_cast<void**>(&vertexData));//書き込むためのアドレスを取得
-	std::memcpy(vertexData, modelData.vertices.data(), sizeof(VertexData) * modelData.vertices.size());//頂点データをリソースにコピー
 
 
 
@@ -1143,8 +903,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	D3D12_VIEWPORT viewport{};
 
-	viewport.Width = kClientWidth;
-	viewport.Height = kClientHeight;
+	viewport.Width = WinApp::kClientWidth;
+	viewport.Height = WinApp::kClientHeight;
 	viewport.TopLeftX = 0;
 	viewport.TopLeftY = 0;
 	viewport.MinDepth = 0.0f;
@@ -1152,9 +912,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	D3D12_RECT scissorRect{};
 	scissorRect.left = 0;
-	scissorRect.right = kClientWidth;
+	scissorRect.right = WinApp::kClientWidth;
 	scissorRect.top = 0;
-	scissorRect.bottom = kClientHeight;
+	scissorRect.bottom = WinApp::kClientHeight;
 
 
 
@@ -1176,14 +936,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	ImGui::StyleColorsDark();
-	ImGui_ImplWin32_Init(hwnd);
+	ImGui_ImplWin32_Init(winApp->GetHwnd());
 	ImGui_ImplDX12_Init(device, swapChainDesc.BufferCount, rtvDesc.Format, srvDescriptorHeap, srvDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), srvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
 
 	//Textureを読んで転送する
-	//DirectX::ScratchImage mipImages = LoadTexture("resources/uvChecker.png");
-
-	DirectX::ScratchImage mipImages = LoadTexture(modelData.material.textureFilePath);
-
+	DirectX::ScratchImage mipImages = LoadTexture("resources/uvChecker.png");
 	const DirectX::TexMetadata& metadata = mipImages.GetMetadata();
 	ID3D12Resource* textureResouce = CreateTextureResource(device, metadata);
 	UploadTextureData(textureResouce, mipImages);
@@ -1206,7 +963,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 
 	//DepthStencilTextureをウィンドウのサイズで作成
-	ID3D12Resource* depthStencilResource = CreateDepthStencilTextureResource(device, kClientWidth, kClientHeight);
+	ID3D12Resource* depthStencilResource = CreateDepthStencilTextureResource(device, WinApp::kClientWidth, WinApp::kClientHeight);
 
 	//DSV用のヒープでディスクリプタの数は1。DSVはShader内で触るものではないので、ShaderVisibleはfalse
 	ID3D12DescriptorHeap* dsvDescriptorHeap = CreateDescriptorHeap(device, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1, false);
@@ -1246,6 +1003,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	vertexDataSprite[3].texcoord = { 1.0f,0.0f };
 
 
+	/*assert(false && "TEST");*/
+
 	//Sprite用のTransformationMatrix用のリソースを作る。Matrix4x4 1つ分のサイズを用意する
 	ID3D12Resource* transformationMatrixResourceSprite = CreateBufferResource(device, sizeof(Matrix4x4));
 	//データを書き込む
@@ -1274,45 +1033,53 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	indexDataSprite[0] = 0; indexDataSprite[1] = 1; indexDataSprite[2] = 2;
 	indexDataSprite[3] = 1; indexDataSprite[4] = 3; indexDataSprite[5] = 2;
 
+	BYTE key[256] = {};
+	BYTE prekey[256] = {};
 
-	//キーボートの入力状況補間管理
-	BYTE key[256]{};
-	BYTE prekey[256]{};
 
-	//
 	MSG msg{};
+
+	Input* input = nullptr;
+
+	input = new Input();
+	input->Initialise(winApp);
+
+
+
+
+
+
+
+
 	//ウィンドウの×ボタンが押されるまでループ
-	while (msg.message != WM_QUIT)
+	while (true)
 	{
 		//Windowにメッセージが来てたら最優先で処理させる
-		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+		if (winApp->ProcessMessage())
 		{
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
+			break;
 		} else
 		{
 			//キーボード情報の取得開始
 			keyboard->Acquire();
-			
-			//前frameの入力を保管
+			input->Update();
+
 			memcpy(prekey, key, 256);
 
-			//最新の入力を保存
 			keyboard->GetDeviceState(sizeof(key), key);
-			
-
-			if (prekey[DIK_SPACE]&& !key[DIK_SPACE]) {
-				
-				OutputDebugStringA("Press Space \n");
-			}
-
 
 			//ゲームの処理
+
+			if (input->PushKey(DIK_SPACE))
+			{
+				OutputDebugStringA("Press Space\n");
+			}
+
 
 			//Sprite用のWorldViewProjectionMatrixを作る
 			Matrix4x4 worldMatrixSprite = MakeAffineMatrix(transformSprite.scale, transformSprite.rotate, transformSprite.translate);
 			Matrix4x4 viewMatrixSprite = MakeIdentity4x4();
-			Matrix4x4 projectionMatrixSprite = MakeOrthographicMatrix(0.0f, 0.0f, float(kClientWidth), float(kClientHeight), 0.0f, 100.0f);
+			Matrix4x4 projectionMatrixSprite = MakeOrthographicMatrix(0.0f, 0.0f, float(WinApp::kClientWidth), float(WinApp::kClientHeight), 0.0f, 100.0f);
 			Matrix4x4 worldViewProjectionMatrixSprite = Multiply(worldMatrixSprite, Multiply(viewMatrixSprite, projectionMatrixSprite));
 			*transformationMatrixDataSprite = worldViewProjectionMatrixSprite;
 
@@ -1322,13 +1089,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			ImGui::NewFrame();
 
 
-			//transform.rotate.y += 0.03f;
+			transform.rotate.y += 0.03f;
 			/*Matrix4x4 worldMatrix = MakeAffineMatrix(transform.scale, transform.rotate, transform.translate);
 			*wvpData = worldMatrix;*/
 			Matrix4x4 worldMatrix = MakeAffineMatrix(transform.scale, transform.rotate, transform.translate);
 			Matrix4x4 cameraMatrix = MakeAffineMatrix(cameraTransform.scale, cameraTransform.rotate, cameraTransform.translate);
 			Matrix4x4 viewMatrix = Inverse(cameraMatrix);
-			Matrix4x4 projectionMatrix = MakePerspectiveFovMatrix(0.45f, float(kClientWidth) / float(kClientHeight), 0.1f, 100.0f);
+			Matrix4x4 projectionMatrix = MakePerspectiveFovMatrix(0.45f, float(WinApp::kClientWidth) / float(WinApp::kClientHeight), 0.1f, 100.0f);
 			Matrix4x4 worldViewProjectionMatrix = Multiply(worldMatrix, Multiply(viewMatrix, projectionMatrix));
 			*wvpData = worldViewProjectionMatrix;
 
@@ -1337,9 +1104,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 			ImGui::Begin("Settings");
 			ImGui::ColorEdit4("material", &materialData->x, ImGuiColorEditFlags_AlphaPreview);
-			ImGui::DragFloat("rotate.y", &transform.rotate.y, 0.1f);
-			ImGui::DragFloat3("transform", &transform.translate.x, 0.1f);
-			ImGui::DragFloat2("Sprite transform", &transformSprite.translate.x, 1.0f);
 			ImGui::End();
 
 			ImGui::Render();
@@ -1391,7 +1155,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 			commandList->DrawInstanced(6, 1, 0, 0);
 
-
 			//Spriteの描画。変更が必要なものだけ変更する
 			commandList->IASetVertexBuffers(0, 1, &vertexBufferViewSprite);//VBVを設定
 			//TransformationMatrixCBufferの場所を設定
@@ -1401,10 +1164,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 			//描画！(DrawCall/ドローコール)6個のインデックスを使用し1つのインスタンスを描画。その他当面0で良い
 			commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
-
-
-			//モデル描画
-			commandList->DrawInstanced(UINT(modelData.vertices.size()), 1, 0, 0);
 
 
 			ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList);
@@ -1437,18 +1196,20 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				WaitForSingleObject(fenceEvent, INFINITE);
 			}
 
-
-			//コマンドリスト
 			hr = commandAllocator->Reset();
 			assert(SUCCEEDED(hr));
 			hr = commandList->Reset(commandAllocator, nullptr);
 			assert(SUCCEEDED(hr));
 
-			//ECSを押したら消す
-			if (key[DIK_ESCAPE]) {
-				OutputDebugStringA("Game Loop  End \n");
+
+			if (key[DIK_ESCAPE])
+			{
+
+				OutputDebugStringA("Game loop END\n");
 				break;
+
 			}
+
 		}
 
 	}
@@ -1510,7 +1271,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 #ifdef _DEBUG
 	debugController->Release();
 #endif // _DEBUG
-	CloseWindow(hwnd);
+
 
 	IDXGIDebug1* debug;
 	if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&debug)))) {
@@ -1520,7 +1281,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		debug->Release();
 	}
 
-	CoUninitialize();
+	winApp->Finalize();
+
+	delete input;
+
+	delete winApp;
 
 	return 0;
 }
