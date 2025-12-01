@@ -583,21 +583,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 
 
-	//RTVの設定
-	D3D12_RENDER_TARGET_VIEW_DESC rtvDesc{};
-	rtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-	rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-	//ディスクリプタの先頭を取得
-	D3D12_CPU_DESCRIPTOR_HANDLE rtvStartHandle = rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-	//RTVを2つ作るのでディスクリプタを２つ用意
-	D3D12_CPU_DESCRIPTOR_HANDLE rtvHandles[2];
-	//１つ目
-	rtvHandles[0] = rtvStartHandle;
-	device->CreateRenderTargetView(swapChainResources[0], &rtvDesc, rtvHandles[0]);
-	//２つ目
-	rtvHandles[1].ptr = rtvHandles[0].ptr + device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-	device->CreateRenderTargetView(swapChainResources[1], &rtvDesc, rtvHandles[1]);
-
 
 
 	ID3D12Fence* fence = nullptr;
@@ -745,34 +730,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	hr = device->CreateGraphicsPipelineState(&graphicsPipelineStateDesc, IID_PPV_ARGS(&graphicsPipelineState));
 	assert(SUCCEEDED(hr));
 
-	//DirectInput 初期化
-	IDirectInput8* directInput = nullptr;
-	hr = DirectInput8Create(
-		winApp->GetHInstance(),
-		DIRECTINPUT_VERSION,
-		IID_IDirectInput8,
-		(void**)&directInput,
-		nullptr
-	);
-	assert(SUCCEEDED(hr));
 
-	//キーボード用デバイスの初期化
-	IDirectInputDevice8* keyboard = nullptr;
-	hr = directInput->CreateDevice(
-		GUID_SysKeyboard,
-		&keyboard,
-		NULL
-	);
-	assert(SUCCEEDED(hr));
-
-	//入力データ形式のセット
-	hr = keyboard->SetDataFormat(&c_dfDIKeyboard);
-	assert(SUCCEEDED(hr));
-
-	//排他制御レベルのセット
-	hr = keyboard->SetCooperativeLevel(
-		winApp->GetHwnd(), DISCL_FOREGROUND | DISCL_NONEXCLUSIVE | DISCL_NOWINKEY);
-	assert(SUCCEEDED(hr));
 
 	ID3D12Resource* vertexResource = CreateBufferResource(device, sizeof(VertexData) * 6);
 
@@ -976,16 +934,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		{
 			break;
 		}
-		//キーボード情報の取得開始
-		keyboard->Acquire();
+
 		input->Update();
 
-		memcpy(prekey, key, 256);
-
-		keyboard->GetDeviceState(sizeof(key), key);
-
 		//ゲームの処理
-
 		if (input->PushKey(DIK_SPACE))
 		{
 			OutputDebugStringA("Press Space\n");
@@ -1000,10 +952,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		*transformationMatrixDataSprite = worldViewProjectionMatrixSprite;
 
 
-		ImGui_ImplDX12_NewFrame();
-		ImGui_ImplWin32_NewFrame();
-		ImGui::NewFrame();
-
+		
 
 		transform.rotate.y += 0.03f;
 		/*Matrix4x4 worldMatrix = MakeAffineMatrix(transform.scale, transform.rotate, transform.translate);
@@ -1016,46 +965,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		*wvpData = worldViewProjectionMatrix;
 
 
-		ImGui::ShowDemoWindow();
-
-		ImGui::Begin("Settings");
-		ImGui::ColorEdit4("material", &materialData->x, ImGuiColorEditFlags_AlphaPreview);
-		ImGui::End();
-
-		ImGui::Render();
-
-
-
-
-		//これから書き込むバックバッファのインデックスを取得
-		UINT backBufferIndex = swapChain->GetCurrentBackBufferIndex();
-
-		//TransitionBarrierの設定
-		D3D12_RESOURCE_BARRIER barrier{};
-
-		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-		barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-		barrier.Transition.pResource = swapChainResources[backBufferIndex];
-		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
-		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
-		commandList->ResourceBarrier(1, &barrier);
-
-		//描画先のRTVを設定する
-		commandList->OMSetRenderTargets(1, &rtvHandles[backBufferIndex], false, nullptr);
+		
 		//指定した色で画面全体をクリアする
 		float clearColor[] = { 0.1f,0.25,0.5f,1.0f };
 		commandList->ClearRenderTargetView(rtvHandles[backBufferIndex], clearColor, 0, nullptr);
 
-		//描画先のRTVとDSVを設定する
-		D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = dsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-		commandList->OMSetRenderTargets(1, &rtvHandles[backBufferIndex], false, &dsvHandle);
-		//指定した深度で画面全体をクリアする
-		commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
-
-
-		ID3D12DescriptorHeap* descriptorHeap[] = { srvDescriptorHeap };
-		commandList->SetDescriptorHeaps(1, descriptorHeap);
-
+	
 
 
 
@@ -1102,14 +1017,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		commandQueue->ExecuteCommandLists(1, commandLists);
 		swapChain->Present(1, 0);
 
-		//Fenceの値を更新
-		fenceValue++;
-		commandQueue->Signal(fence, fenceValue);
-
-		if (fence->GetCompletedValue() < fenceValue) {
-			fence->SetEventOnCompletion(fenceValue, fenceEvent);
-			WaitForSingleObject(fenceEvent, INFINITE);
-		}
+		
 
 		hr = commandAllocator->Reset();
 		assert(SUCCEEDED(hr));

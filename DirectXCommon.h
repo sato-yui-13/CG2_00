@@ -14,6 +14,8 @@ public:
 	//描画終了
 	void PostDraw();
 
+	//初期化
+	void DeviceInitialize();
 
 private:
 	//DirectX12デバイス
