@@ -14,8 +14,19 @@ public:
 	//描画終了
 	void PostDraw();
 
-	//初期化
+	//デバイス初期化
 	void DeviceInitialize();
+	//コマンド初期化
+	void CommandInitialize();
+
+	//スワップチェイン
+	void SwapInitialize();
+	
+	//バッファの生成
+	void BufferInitialize();
+
+	//デスクリプタヒープ
+	void DescriptorHeapInitialize();
 
 private:
 	//DirectX12デバイス
@@ -25,6 +36,7 @@ private:
 
 	WinApp* winApp = nullptr;
 
-
+	//デスクリプタヒープを生成する
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>CreateDescriptorHeap();
 };
 
