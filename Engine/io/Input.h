@@ -12,7 +12,7 @@ public:
 
 public:
 
-	void Initialise(WinApp* winApp);
+	void Initialize(WinApp* winApp);
 
 	void Update();
 

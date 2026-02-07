@@ -8,28 +8,7 @@
       <UniqueIdentifier>{9b7fcbc5-2533-4b88-b75b-d4803e55fa7c}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\Shaders">
-      <UniqueIdentifier>{d665bb3f-6d2a-415d-83f5-abd5c813962b}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Engine">
-      <UniqueIdentifier>{2d258583-515f-4b3e-be87-a60d0bc6a096}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Engine\2D">
-      <UniqueIdentifier>{6f8705ec-a227-425c-90f9-d4cb37788ea3}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Engine\3D">
-      <UniqueIdentifier>{3f522098-0e2f-4a3e-9f8f-4f6f9d28511c}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Engine\audio">
-      <UniqueIdentifier>{8010aa1a-6b4a-4bd5-8208-188042b92615}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Engine\base">
-      <UniqueIdentifier>{aaf53b7e-adfc-4f46-aa7c-38a8192f49ca}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Engine\io">
-      <UniqueIdentifier>{67388fc1-1c7f-4d16-a69c-e621eae0d3ba}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Engine\scene">
-      <UniqueIdentifier>{5c3885e4-4cc8-4ad7-ac53-a6b610ccd5a7}</UniqueIdentifier>
+      <UniqueIdentifier>{eb989628-e889-44bf-837a-05c9f09b258e}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -57,9 +36,6 @@
     <CLInclude Include="scoped.h">
       <Filter>Source Files</Filter>
     </CLInclude>
-    <ClInclude Include="d3dx12.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="BC.cpp">
@@ -119,9 +95,6 @@
     <ClCompile Include="DirectXTexHDR.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="DirectXTexD3D12.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CLInclude Include="BC.h">
@@ -132,10 +105,10 @@
     <None Include="Shaders\CompileShaders.cmd">
       <Filter>Source Files\Shaders</Filter>
     </None>
-    <None Include="Shaders\BC7Encode.hlsl">
+    <None Include="Shaders\BC6HEncode.hlsl">
       <Filter>Source Files\Shaders</Filter>
     </None>
-    <None Include="Shaders\BC6HEncode.hlsl">
+    <None Include="Shaders\BC7Encode.hlsl">
       <Filter>Source Files\Shaders</Filter>
     </None>
   </ItemGroup>

@@ -2,6 +2,8 @@
 #include <Windows.h>
 
 #include "externals/imgui/imgui.h"
+
+#pragma comment(lib,"winmm.lib")
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 
@@ -31,12 +33,10 @@ void WinApp::Initialize()
 {
 	CoInitializeEx(0, COINIT_MULTITHREADED);
 
-
-	/*WNDCLASS wc{};*/
 	//ウィンドウプロシージャ
 	wc.lpfnWndProc = WindowProc;
 	//ウィンドウクラス名(なんでもいい)
-	wc.lpszClassName = L"LE2D_10_サトウ_ユイ";
+	wc.lpszClassName = L"CG2WindowClass";
 	//インスタンスハンドル
 	wc.hInstance = GetModuleHandle(nullptr);
 	//カーソル
@@ -44,10 +44,6 @@ void WinApp::Initialize()
 
 	//ウィンドウクラスを登録
 	RegisterClass(&wc);
-
-	////クライアント両雨域のサイズ
-	//const int32_t kClientWidth = 1280;
-	//const int32_t kClientHeight = 720;
 
 	//ウィンドウサイズを表す構造体にクライアント領域を入れる
 	RECT wrc = { 0,0,kClientWidth,kClientHeight };
@@ -69,10 +65,11 @@ void WinApp::Initialize()
 		wc.hInstance,
 		nullptr);
 
-
-
 	//ウィンドウを表示する
 	ShowWindow(hwnd, SW_SHOW);
+
+	//システムタイマーの分解能をあげる
+	timeBeginPeriod(1);
 
 }
 

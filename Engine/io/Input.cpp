@@ -5,7 +5,7 @@
 #pragma comment(lib,"dxguid.lib")
 
 
-void Input::Initialise(WinApp* winApp)
+void Input::Initialize(WinApp* winApp)
 {
 
 	this->winApp_ = winApp;
